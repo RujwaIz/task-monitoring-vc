@@ -31,11 +31,14 @@
                     <tbody>
                         @forelse ($tasks as $task)
                             <tr>
-                                <td class="task-title">{{ $task['title'] }}</td>
-                                <td class="owner">{{ $task['owner'] }}</td>
-                                <td class="date">{{ \Carbon\Carbon::parse($task['due_date'])->format('M j, Y') }}</td>
-                                <td><span class="tag priority-{{ strtolower($task['priority']) }}">{{ $task['priority'] }}</span></td>
-                                <td><span class="tag status-{{ str_replace(' ', '-', strtolower($task['status'])) }}">{{ $task['status'] }}</span></td>
+                                <td class="task-title">{{ $task->title }}</td>
+                                <td class="owner">{{ $task->owner }}</td>
+                                <td class="date">{{ $task->due_date->format('M j, Y') }}</td>
+                                <td><span class="tag priority-{{ strtolower($task->priority->value) }}">{{ $task->priority->value }}</span></td>
+                                <td>
+                                    <span class="tag status-{{ str_replace(' ', '-', strtolower($task->status->value)) }}">{{ $task->status->value }}</span>
+                                    @if ($task->isOverdue()) <span class="tag late">Overdue</span> @endif
+                                </td>
                             </tr>
                         @empty
                             <tr><td class="empty-state" colspan="5">No tasks have been added.</td></tr>

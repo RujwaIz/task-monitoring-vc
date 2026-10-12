@@ -76,6 +76,10 @@
             font-size: 13px;
         }
 
+        .logout-form { display: inline; margin-left: 12px; }
+        .logout-button { background: none; border: 1px solid #c3d89a; color: #f6f8f4; padding: 4px 10px; font: inherit; font-size: 12px; cursor: pointer; }
+        .logout-button:hover { background: #214c3d; }
+
         .page-shell { padding: 38px 0 56px; }
 
         .page-heading {
@@ -189,6 +193,7 @@
             white-space: nowrap;
         }
 
+        .tag.late { background: #f8e4df; border-color: #f0c9bd; color: #813d2c; margin-left: 6px; }
         .priority-high { background: #f8e4df; border-color: #f0c9bd; color: #813d2c; }
         .priority-medium { background: #f7edcf; border-color: #eadba9; color: #705719; }
         .priority-low { background: #e5eedb; border-color: #cfdfbf; color: #3b5a31; }
@@ -296,7 +301,17 @@
     <header class="topbar">
         <div class="topbar-inner">
             <div class="brand"><span class="brand-mark" aria-hidden="true">T</span> Task Monitor</div>
-            <div class="topbar-label">Internal operations</div>
+            <div class="topbar-label">
+                @auth
+                    {{ auth()->user()->name }}
+                    <form action="{{ route('logout') }}" method="POST" class="logout-form">
+                        @csrf
+                        <button type="submit" class="logout-button">Sign out</button>
+                    </form>
+                @else
+                    Internal operations
+                @endauth
+            </div>
         </div>
     </header>
     <main class="page-shell">
