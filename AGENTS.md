@@ -34,6 +34,7 @@ Workshop use: fake data only.
 
 ## How to work
 - Plan first, then small steps. Run the tests after every step. Commit after every step.
+- Store Plan in Plan.md
 - Do not add packages without asking.
 
 ## Never do
