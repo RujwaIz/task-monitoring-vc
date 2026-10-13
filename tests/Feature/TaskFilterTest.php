@@ -122,6 +122,104 @@ class TaskFilterTest extends TestCase
             ->assertSee('Match')->assertDontSee('Wrong status')->assertDontSee('Wrong priority');
     }
 
+    public function test_overdue_filter_excludes_complete_tasks(): void
+    {
+        $user = User::factory()->create();
+        $yesterday = today()->subDay()->toDateString();
+        Task::factory()->create(['user_id' => $user->id, 'title' => 'Late open', 'due_date' => $yesterday, 'status' => 'In progress']);
+        Task::factory()->create(['user_id' => $user->id, 'title' => 'Late not started', 'due_date' => today()->subDays(5)->toDateString(), 'status' => 'Not started']);
+        Task::factory()->create(['user_id' => $user->id, 'title' => 'Late but done', 'due_date' => $yesterday, 'status' => 'Complete']);
+
+        $tasks = $this->actingAs($user)->get('/?overdue=1')->assertOk()->viewData('tasks');
+
+        $this->assertEqualsCanonicalizing(['Late open', 'Late not started'], $tasks->pluck('title')->all());
+    }
+
+    public function test_a_task_due_today_is_not_overdue(): void
+    {
+        $user = User::factory()->create();
+        Task::factory()->create(['user_id' => $user->id, 'title' => 'Due today', 'due_date' => today()->toDateString(), 'status' => 'Not started']);
+        Task::factory()->create(['user_id' => $user->id, 'title' => 'Due tomorrow', 'due_date' => today()->addDay()->toDateString(), 'status' => 'Not started']);
+
+        $this->assertCount(0, $this->actingAs($user)->get('/?overdue=1')->assertOk()->viewData('tasks'));
+    }
+
+    public function test_overdue_filter_agrees_with_task_is_overdue(): void
+    {
+        $user = User::factory()->create();
+        $dates = [today()->subDays(3), today()->subDay(), today(), today()->addDay()];
+        foreach ($dates as $date) {
+            foreach (['Not started', 'In progress', 'Complete'] as $status) {
+                Task::factory()->create(['user_id' => $user->id, 'due_date' => $date->toDateString(), 'status' => $status]);
+            }
+        }
+
+        $shown = $this->actingAs($user)->get('/?overdue=1')->assertOk()->viewData('tasks')->pluck('id')->all();
+        $expected = $user->tasks()->get()->filter(fn (Task $task) => $task->isOverdue())->pluck('id')->all();
+
+        $this->assertNotEmpty($expected);
+        $this->assertEqualsCanonicalizing($expected, $shown);
+    }
+
+    public function test_overdue_is_only_applied_for_the_value_1(): void
+    {
+        $user = User::factory()->create();
+        Task::factory()->create(['user_id' => $user->id, 'due_date' => today()->subDay()->toDateString(), 'status' => 'Not started']);
+        Task::factory()->create(['user_id' => $user->id, 'due_date' => today()->addDay()->toDateString(), 'status' => 'Not started']);
+
+        foreach (['/?overdue=0', '/?overdue=abc', '/?overdue[]=1', '/?overdue='] as $url) {
+            $this->assertCount(2, $this->actingAs($user)->get($url)->assertOk()->viewData('tasks'));
+        }
+    }
+
+    public function test_no_filter_ever_shows_another_users_tasks(): void
+    {
+        $amina = User::factory()->create();
+        $daniel = User::factory()->create();
+        $yesterday = today()->subDay()->toDateString();
+        Task::factory()->create(['user_id' => $amina->id, 'title' => 'Budget mine', 'due_date' => $yesterday, 'status' => 'Not started', 'priority' => 'High']);
+        Task::factory()->create(['user_id' => $daniel->id, 'title' => 'Budget theirs', 'due_date' => $yesterday, 'status' => 'Not started', 'priority' => 'High']);
+
+        foreach ([
+            '/?q=Budget',
+            '/?status=Not+started',
+            '/?priority=High',
+            '/?overdue=1',
+            '/?q=Budget&status=Not+started&priority=High&overdue=1',
+            '/?status=Blocked',
+            '/?priority=Urgent',
+        ] as $url) {
+            $tasks = $this->actingAs($amina)->get($url)->assertOk()->viewData('tasks');
+
+            $this->assertCount(1, $tasks, $url);
+            $this->assertSame($amina->id, $tasks->first()->user_id, $url);
+        }
+    }
+
+    public function test_array_values_do_not_break_the_page(): void
+    {
+        $user = User::factory()->create();
+        Task::factory()->count(2)->create(['user_id' => $user->id]);
+
+        foreach (['status', 'priority', 'overdue'] as $key) {
+            $this->assertCount(2, $this->actingAs($user)->get("/?{$key}[]=x&{$key}[a][b]=y")->assertOk()->viewData('tasks'));
+        }
+
+        $this->actingAs($user)->get('/?q[a][b]=x')->assertStatus(302);
+    }
+
+    public function test_the_form_keeps_the_chosen_values(): void
+    {
+        $user = User::factory()->create();
+
+        $response = $this->actingAs($user)->get('/?q='.urlencode('Budget "Q4"').'&status=In+progress&priority=Medium&overdue=1')->assertOk();
+
+        $response->assertSee('value="Budget &quot;Q4&quot;"', false);
+        $response->assertSee('<option value="In progress" selected>In progress</option>', false);
+        $response->assertSee('<option value="Medium" selected>Medium</option>', false);
+        $response->assertSeeInOrder(['name="overdue"', 'checked'], false);
+    }
+
     public function test_q_is_validated(): void
     {
         $user = User::factory()->create();

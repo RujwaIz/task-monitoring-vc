@@ -15,7 +15,7 @@
         <section aria-labelledby="task-list-heading">
             <div class="section-heading">
                 <h2 id="task-list-heading">Current tasks</h2>
-                <span class="task-count">{{ count($tasks) }} {{ count($tasks) === 1 ? 'task' : 'tasks' }}</span>
+                <span class="task-count">{{ count($tasks) }} {{ count($tasks) === 1 ? 'task' : 'tasks' }}@if ($filtered) (filtered)@endif</span>
             </div>
             <form action="{{ route('tasks.index') }}" method="GET">
                 <div class="field">
@@ -40,7 +40,16 @@
                         @endforeach
                     </select>
                 </div>
+                <div class="field">
+                    <label for="filter-overdue">
+                        <input id="filter-overdue" name="overdue" type="checkbox" value="1" @checked($overdue) style="display:inline-block;width:auto;height:auto">
+                        Overdue only
+                    </label>
+                </div>
                 <button class="submit-button" type="submit">Filter</button>
+                @if ($filtered)
+                    <p><a href="{{ route('tasks.index') }}">Clear filters</a></p>
+                @endif
             </form>
             <div class="table-wrap">
                 <table>
@@ -66,7 +75,7 @@
                                 </td>
                             </tr>
                         @empty
-                            <tr><td class="empty-state" colspan="5">No tasks have been added.</td></tr>
+                            <tr><td class="empty-state" colspan="5">{{ $filtered ? 'No tasks match these filters.' : 'No tasks have been added.' }}</td></tr>
                         @endforelse
                     </tbody>
                 </table>
