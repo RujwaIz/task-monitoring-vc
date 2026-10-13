@@ -13,9 +13,17 @@ class TaskController extends Controller
 {
     public function index(Request $request): View
     {
-        $tasks = $request->user()->tasks()->orderBy('due_date')->orderBy('id')->get();
+        $validated = $request->validate([
+            'q' => ['nullable', 'string', 'max:180'],
+        ]);
 
-        return view('tasks.index', compact('tasks'));
+        $q = $validated['q'] ?? null;
+
+        $tasks = $request->user()->tasks()
+            ->when($q, fn ($query, $q) => $query->whereRaw("title like ? escape '\\'", ['%'.addcslashes($q, '%_\\').'%']))
+            ->orderBy('due_date')->orderBy('id')->get();
+
+        return view('tasks.index', compact('tasks', 'q'));
     }
 
     public function store(Request $request): RedirectResponse

@@ -17,6 +17,13 @@
                 <h2 id="task-list-heading">Current tasks</h2>
                 <span class="task-count">{{ count($tasks) }} {{ count($tasks) === 1 ? 'task' : 'tasks' }}</span>
             </div>
+            <form action="{{ route('tasks.index') }}" method="GET">
+                <div class="field">
+                    <label for="q">Search title</label>
+                    <input id="q" name="q" type="text" maxlength="180" value="{{ $q }}">
+                </div>
+                <button class="submit-button" type="submit">Filter</button>
+            </form>
             <div class="table-wrap">
                 <table>
                     <thead>
