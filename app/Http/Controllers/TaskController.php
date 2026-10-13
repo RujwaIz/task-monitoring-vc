@@ -20,13 +20,15 @@ class TaskController extends Controller
         $q = $validated['q'] ?? null;
 
         $status = $this->enumFromQuery($request, 'status', TaskStatus::class);
+        $priority = $this->enumFromQuery($request, 'priority', TaskPriority::class);
 
         $tasks = $request->user()->tasks()
             ->when($q, fn ($query, $q) => $query->whereRaw("title like ? escape '\\'", ['%'.addcslashes($q, '%_\\').'%']))
             ->when($status, fn ($query, $status) => $query->where('status', $status))
+            ->when($priority, fn ($query, $priority) => $query->where('priority', $priority))
             ->orderBy('due_date')->orderBy('id')->get();
 
-        return view('tasks.index', compact('tasks', 'q', 'status'));
+        return view('tasks.index', compact('tasks', 'q', 'status', 'priority'));
     }
 
     /** An unknown or malformed query value is ignored (null). */

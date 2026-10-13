@@ -85,6 +85,43 @@ class TaskFilterTest extends TestCase
         $response->assertSee('<option value="Complete" selected>Complete</option>', false);
     }
 
+    public function test_priority_filter_shows_only_matching_tasks_of_the_signed_in_user(): void
+    {
+        $amina = User::factory()->create();
+        $daniel = User::factory()->create();
+        Task::factory()->count(2)->create(['user_id' => $amina->id, 'priority' => 'High']);
+        Task::factory()->count(3)->create(['user_id' => $amina->id, 'priority' => 'Low']);
+        Task::factory()->count(4)->create(['user_id' => $daniel->id, 'priority' => 'High']);
+
+        $response = $this->actingAs($amina)->get('/?priority=High')->assertOk();
+
+        $tasks = $response->viewData('tasks');
+        $this->assertCount(2, $tasks);
+        $this->assertTrue($tasks->every(fn ($t) => $t->user_id === $amina->id && $t->priority->value === 'High'));
+        $response->assertSee('<option value="High" selected>High</option>', false);
+    }
+
+    public function test_unknown_or_malformed_priority_is_ignored(): void
+    {
+        $user = User::factory()->create();
+        Task::factory()->count(3)->create(['user_id' => $user->id]);
+
+        foreach (['/?priority=Urgent', '/?priority[]=High', '/?priority='] as $url) {
+            $this->assertCount(3, $this->actingAs($user)->get($url)->assertOk()->viewData('tasks'));
+        }
+    }
+
+    public function test_priority_and_status_combine(): void
+    {
+        $user = User::factory()->create();
+        Task::factory()->create(['user_id' => $user->id, 'title' => 'Match', 'priority' => 'High', 'status' => 'Complete']);
+        Task::factory()->create(['user_id' => $user->id, 'title' => 'Wrong status', 'priority' => 'High', 'status' => 'Not started']);
+        Task::factory()->create(['user_id' => $user->id, 'title' => 'Wrong priority', 'priority' => 'Low', 'status' => 'Complete']);
+
+        $this->actingAs($user)->get('/?priority=High&status=Complete')
+            ->assertSee('Match')->assertDontSee('Wrong status')->assertDontSee('Wrong priority');
+    }
+
     public function test_q_is_validated(): void
     {
         $user = User::factory()->create();

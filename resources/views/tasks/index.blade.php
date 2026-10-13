@@ -31,6 +31,15 @@
                         @endforeach
                     </select>
                 </div>
+                <div class="field">
+                    <label for="filter-priority">Priority</label>
+                    <select id="filter-priority" name="priority">
+                        <option value="">Any priority</option>
+                        @foreach (\App\Enums\TaskPriority::cases() as $option)
+                            <option value="{{ $option->value }}" @selected($priority === $option)>{{ $option->value }}</option>
+                        @endforeach
+                    </select>
+                </div>
                 <button class="submit-button" type="submit">Filter</button>
             </form>
             <div class="table-wrap">
