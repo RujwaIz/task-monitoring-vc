@@ -22,6 +22,15 @@
                     <label for="q">Search title</label>
                     <input id="q" name="q" type="text" maxlength="180" value="{{ $q }}">
                 </div>
+                <div class="field">
+                    <label for="filter-status">Status</label>
+                    <select id="filter-status" name="status">
+                        <option value="">Any status</option>
+                        @foreach (\App\Enums\TaskStatus::cases() as $option)
+                            <option value="{{ $option->value }}" @selected($status === $option)>{{ $option->value }}</option>
+                        @endforeach
+                    </select>
+                </div>
                 <button class="submit-button" type="submit">Filter</button>
             </form>
             <div class="table-wrap">

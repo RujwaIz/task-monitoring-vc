@@ -19,11 +19,22 @@ class TaskController extends Controller
 
         $q = $validated['q'] ?? null;
 
+        $status = $this->enumFromQuery($request, 'status', TaskStatus::class);
+
         $tasks = $request->user()->tasks()
             ->when($q, fn ($query, $q) => $query->whereRaw("title like ? escape '\\'", ['%'.addcslashes($q, '%_\\').'%']))
+            ->when($status, fn ($query, $status) => $query->where('status', $status))
             ->orderBy('due_date')->orderBy('id')->get();
 
-        return view('tasks.index', compact('tasks', 'q'));
+        return view('tasks.index', compact('tasks', 'q', 'status'));
+    }
+
+    /** An unknown or malformed query value is ignored (null). */
+    private function enumFromQuery(Request $request, string $key, string $enum): ?\BackedEnum
+    {
+        $value = $request->query($key);
+
+        return is_string($value) ? $enum::tryFrom($value) : null;
     }
 
     public function store(Request $request): RedirectResponse
